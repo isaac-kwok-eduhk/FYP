@@ -1,0 +1,8 @@
+﻿cd /home/isaac/Desktop/PythonProject
+source .venv/bin/activate
+python3 server.py
+
+
+
+
+sudo poweroff

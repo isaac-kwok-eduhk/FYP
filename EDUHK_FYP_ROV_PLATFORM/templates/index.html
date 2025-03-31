@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <img class="img" src="{{ url_for('static', filename='imagefolder/eduhk.png') }}" alt="eduhk">
+     
+            <div class="chat-response">
+                <div id="response"></div> <!-- Area for server responses -->
+            </div> 
+            <div class="button-container">
+                <button id="record" class="record-button">
+                    Start Recording
+                </button>
+                <button id="capture">Capture Image</button> <!-- Button to capture image -->
+            </div>
+        </div>
+        
+        <div class="center">
+            <img id="webcam-feed" src="{{ url_for('video_feed') }}" alt="Webcam Feed" />
+            <div class="input-container">
+                <input contenteditable="true" type="text" id="text-input" placeholder="Type your message here..." />
+                <button id="send-message">Send</button> <!-- Button to send message -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Capture image functionality (remains unchanged)
+        document.getElementById('capture').addEventListener('click', function() {
+            const imgElement = document.getElementById('webcam-feed');
+            const canvas = document.createElement('canvas');
+            canvas.width = imgElement.width;
+            canvas.height = imgElement.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgElement, 0, 0);
+
+            const imageData = canvas.toDataURL('image/jpeg'); // Capture image as Data URL
+            console.log("Image data to send:", imageData); // For debugging
+            
+            // Sending captured image data to the server
+            fetch('/capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle server response
+                if (typeof data === 'string') {
+                    document.getElementById('response').innerText = data;
+                } else if (data && data.error) {
+                    document.getElementById('response').innerText = data.error;
+                } else {
+                    document.getElementById('response').innerText = 'Unexpected response format.';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('response').innerText = 'Error capturing image.';
+            });
+        });
+
+        // Send message functionality
+        document.getElementById('send-message').addEventListener('click', function() {
+            const userInput = document.getElementById('text-input').value; // Get user input
+            if (!userInput) {
+                alert("Please enter a message.");
+                return;
+            }
+
+            // Sending user input to the server
+            fetch('/text_response', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input: userInput })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`); // Throw an error if response is not OK
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Handle server response
+                document.getElementById('response').innerText = data; // Display the response
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('response').innerText = 'Error sending message: ' + error.message; // Display the error message
+            });
+        });
+
+        let isRecording = false;
+
+        document.getElementById('record').addEventListener('click', function() {
+            const endpoint = isRecording ? '/stop_recording' : '/start_recording'; // Determine endpoint based on recording state
+            fetch(endpoint, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    isRecording = !isRecording; // Toggle recording state
+                    this.innerText = isRecording ? 'Stop Recording' : 'Start Recording'; // Update button text
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Handle error silently
+            });
+        });
+    </script>
+</body>
+</html>
