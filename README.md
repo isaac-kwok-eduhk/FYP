@@ -32,4 +32,4 @@ LM Studio
 # run
 1.connect Putty
 2.connect controller
-run main.py
+3.run main.py
