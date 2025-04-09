@@ -1,0 +1,8 @@
+﻿cd /home/username/Desktop/PythonProject ''' change the user name'''
+source .venv/bin/activate
+python3 server.py
+
+
+
+
+sudo poweroff

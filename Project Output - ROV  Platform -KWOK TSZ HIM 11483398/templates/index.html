@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <style>
+        .conversation-history {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+        .message-container {
+            margin-bottom: 15px;
+        }
+        .message-timestamp {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .user-message {
+            color: #2c3e50;
+            background: #ecf0f1;
+            padding: 8px;
+            border-radius: 10px;
+            margin-left: 20%;
+        }
+        .assistant-message {
+            color: #16a085;
+            background: #d1f2eb;
+            padding: 8px;
+            border-radius: 10px;
+            margin-right: 20%;
+        }
+        .system-message {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <img class="img" src="{{ url_for('static', filename='imagefolder/eduhk.png') }}" alt="eduhk">
+            
+            <div class="chat-response">
+                <div class="conversation-history" id="conversation-history">
+                    <!-- Conversation history will be populated here -->
+                </div>
+            </div>
+            <div class="button-container">
+                <button id="record" class="record-button">
+                    Start Recording
+                </button>
+                <button id="capture">Capture Image</button>
+            </div>
+        </div>
+        
+        <div class="center">
+            <img id="webcam-feed" src="{{ url_for('video_feed') }}" alt="Webcam Feed" />
+            <div class="input-container">
+                <input type="text" id="text-input" placeholder="Type your message here..." />
+                <button id="send-message">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to add messages to the conversation history
+        function addMessageToHistory(role, content, timestamp) {
+            const historyDiv = document.getElementById('conversation-history');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-container';
+            
+            const timestampSpan = document.createElement('div');
+            timestampSpan.className = 'message-timestamp';
+            timestampSpan.textContent = timestamp || new Date().toLocaleString();
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `${role}-message`;
+            contentDiv.textContent = content;
+
+            messageDiv.appendChild(timestampSpan);
+            messageDiv.appendChild(contentDiv);
+            historyDiv.appendChild(messageDiv);
+            
+            // Auto-scroll to bottom
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+        }
+
+        // Capture functionality
+        document.getElementById('capture').addEventListener('click', function() {
+            const imgElement = document.getElementById('webcam-feed');
+            const canvas = document.createElement('canvas');
+            canvas.width = imgElement.width;
+            canvas.height = imgElement.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgElement, 0, 0);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+            
+            fetch('/capture', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (typeof data === 'string') {
+                    addMessageToHistory('assistant', data);
+                } else if (data && data.error) {
+                    addMessageToHistory('system', `Error: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                addMessageToHistory('system', `Error: ${error.message}`);
+            });
+        });
+
+        // Send message functionality
+        document.getElementById('send-message').addEventListener('click', function() {
+            const inputField = document.getElementById('text-input');
+            const userInput = inputField.value.trim();
+            
+            if (!userInput) {
+                alert("Please enter a message.");
+                return;
+            }
+
+            // Add user message immediately
+            addMessageToHistory('user', userInput);
+            
+            fetch('/text_response', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ input: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (typeof data === 'string') {
+                    addMessageToHistory('assistant', data);
+                } else if (data && data.error) {
+                    addMessageToHistory('system', `Error: ${data.error}`);
+                }
+                inputField.value = ''; // Clear input field
+            })
+            .catch(error => {
+                addMessageToHistory('system', `Error: ${error.message}`);
+                inputField.value = '';
+            });
+        });
+
+        // Recording button functionality
+        let isRecording = false;
+        document.getElementById('record').addEventListener('click', function() {
+            const endpoint = isRecording ? '/stop_recording' : '/start_recording';
+            fetch(endpoint, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    isRecording = !isRecording;
+                    this.innerText = isRecording ? 'Stop Recording' : 'Start Recording';
+                    addMessageToHistory('system', data.message);
+                }
+            })
+            .catch(error => {
+                addMessageToHistory('system', 'Recording error: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html>
