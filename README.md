@@ -23,7 +23,9 @@ raspberry pi
 LM Studio
 1. Install LM Studio
    website: https://lmstudio.ai/
-2.copy the api ![image](https://github.com/user-attachments/assets/b25b1bf4-0219-43eb-9536-1d96714dc713) into main.py ![image](https://github.com/user-attachments/assets/0f389629-7a97-4c7a-924b-f934d471dc94)
+2.copy the api into main.py
+ ![image](https://github.com/user-attachments/assets/b25b1bf4-0219-43eb-9536-1d96714dc713)
+ ![image](https://github.com/user-attachments/assets/0f389629-7a97-4c7a-924b-f934d471dc94)
 
 
    
